@@ -1,5 +1,9 @@
 Tools to edit ebooks
 
 # Introduction
-Motivation of this toolkit is that some ebooks, most with type of PDF, downloaded from, like, [Library Genesis](http://libgen.rs/), have some flaws for reading in IPAD. For example, some have no bookmarks. Tools here are designed to fix these flaws, like adding bookmarks.
+Motivation of this toolkit is that some ebooks, e.g. downloaded from [Library Genesis](http://libgen.rs/), have some flaws for reading, for example no bookmarks. Tools here are designed to fix these flaws. Currently implemented tasks include adding bookmarks, editing page labels, removing annotations, changing page size and so on
 
+# Required Library
+PyPDF2
+
+# Task
