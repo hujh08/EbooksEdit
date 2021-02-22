@@ -9,6 +9,8 @@ import re
 
 import PyPDF2.pdf as PDF
 
+from .funcs_rw import get_root_of_rw
+
 # objects for page label
 ## named style
 _map_style={'roman lowercase': '/r',
@@ -72,8 +74,9 @@ def add_pagelabels(writer, pagelabels):
     '''
         add a list of page labels
     '''
-    for page, *args in pagelabels:
-        add_pagelabel(writer, page, *args)
+    for page, *ss in pagelabels:
+        add_pagelabel(writer, page, *ss)
+    return len(pagelabels)
 
 # get page labels
 def locate_pagelabels_in_writer(writer, add_ifnot=False):
@@ -84,7 +87,7 @@ def locate_pagelabels_in_writer(writer, add_ifnot=False):
             add_ifnot: bool
                 if True, add an empty page labels structure when not exists
     '''
-    root_obj=writer._root_object
+    root_obj=get_root_of_rw(writer)
     if '/PageLabels' not in root_obj:
         if not add_ifnot:
             return None
@@ -107,7 +110,7 @@ def get_pagelabels_from_reader(reader):
 
         return a list of page labels, [page, style, start]
     '''
-    nums_array=reader.trailer['/Root']['/PageLabels']['/Nums']
+    nums_array=get_root_of_rw(reader)['/PageLabels']['/Nums']
 
     n=len(nums_array)
     assert n % 2 == 0

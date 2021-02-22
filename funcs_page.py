@@ -22,3 +22,17 @@ def page_clean_annots(page):
     del page['/Annots']
     
     return n
+
+# page range
+def ext_elements_in_range(array, page_range=None):
+    '''
+        slice for page range
+    '''
+    if page_range is None:
+        return array
+
+    if isinstance(page_range, numbers.Integral):
+        # only a integral
+        return array[slice(page_range)]
+
+    return array[slice(*page_range)]

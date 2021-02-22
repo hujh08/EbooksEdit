@@ -7,7 +7,7 @@ Functions for PDF outline
 import numbers
 import re
 
-from PyPDF2 import PdfFileReader #, PdfFileWriter
+from .funcs_rw import open_pdf_as_reader
 
 # from pdf
 def get_outlines_from_reader(reader):
@@ -24,7 +24,7 @@ def get_outlines_from_pdf(pdfname):
     '''
         get outlines from a pdf file
     '''
-    reader=PdfFileReader(open(pdfname, 'rb'))
+    reader=open_pdf_as_reader(pdfname)
     return get_outlines_from_reader(reader)
 
 def parse_outlines_list(outlines, reader, level=0):
