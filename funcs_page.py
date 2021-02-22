@@ -8,6 +8,8 @@ there are two types of page
     one in image converting is from fitz
 '''
 
+import numbers
+
 # remove annotations
 def page_clean_annots(page):
     '''

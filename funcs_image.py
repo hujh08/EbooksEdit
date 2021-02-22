@@ -10,11 +10,13 @@ two libraries used: fitz and reportlab
 '''
 
 import os
-from io import BytesIO
 
-import numbers
+from io import BytesIO
+import re
 
 from PIL import Image
+
+import numpy as np
 
 import fitz
 

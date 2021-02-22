@@ -4,9 +4,6 @@
 Functions for PDF page label
 '''
 
-import numbers
-import re
-
 import PyPDF2.pdf as PDF
 
 from .funcs_rw import get_root_of_rw
