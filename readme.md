@@ -5,5 +5,8 @@ Motivation of this toolkit is that some ebooks, e.g. downloaded from [Library Ge
 
 # Required Library
 PyPDF2
+PyMuPDF
+reportlab
+cnocr
 
 # Task
