@@ -16,8 +16,6 @@ import re
 
 from PIL import Image
 
-import numpy as np
-
 import fitz
 
 from reportlab.lib import pagesizes as PageSizes
@@ -236,4 +234,12 @@ def read_images_from_dir(dir_image):
     if not samefmt:
         return sorted(fnames)
 
-    return [fnames[i] for i in np.argsort(nums)]
+    return [fnames[i] for i in argsort(nums)]
+
+def argsort(array):
+    '''
+        argsort array
+    '''
+    inds=list(range(len(array)))
+    pairs=list(zip(inds, array))
+    return [i for i, _ in sorted(pairs, key=lambda s: s[1])]
