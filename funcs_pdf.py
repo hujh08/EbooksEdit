@@ -24,7 +24,7 @@ def copy_pdf(pdf_old, pdf_new=None, writer=None, page_range=None,
     pages=range(nump)
     if page_range is not None:
         pages=ext_elements_by_range(pages, ele_range=page_range, one_started=True, keep_end=True)
-    print('number of pages in pdf: %i' % len(pages))
+    # print('number of pages in pdf: %i' % len(pages))
 
     # copy pages from reader
     if writer is None:
@@ -32,7 +32,7 @@ def copy_pdf(pdf_old, pdf_new=None, writer=None, page_range=None,
     page_shift=writer.getNumPages()  # in case for not empty writer
 
     n_annots=0
-    print('copy pages ...')
+    print('to copy %i pages' % len(pages))
     for i in pages:
         page=reader.getPage(i)
 
@@ -41,7 +41,7 @@ def copy_pdf(pdf_old, pdf_new=None, writer=None, page_range=None,
             n_annots+=n
 
             if n:
-                print('    del %i annots in page %i' % (n, i))
+                print('    del %i annots in page %i' % (n, i+1))
 
         writer.addPage(page)
 
