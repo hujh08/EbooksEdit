@@ -23,8 +23,7 @@ from reportlab.lib import pagesizes as PageSizes
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 
-from .funcs_page import ext_elements_in_range
-from .funcs_path import list_files_by_range_fmt
+from .funcs_path import ext_elements_by_range, list_files_by_range_fmt
 
 # convert page to PIL Image
 def page_to_image(page, write_to_file=None, **kwargs):
@@ -62,29 +61,31 @@ def page_to_pixmap(page, zoomxy=2, alpha=False):
     return page.getPixmap(matrix=mat, alpha=alpha)
 
 # fitz page
-def yield_fitz_pages_from_pdf(pdfname, page_range=None, page_mode=False):
+def yield_fitz_pages_from_pdf(pdfname, page_range=None):
     '''
         return page number and page
+
+        page_range must be given with `one_started` and `keep_end`
+
+        yield page id, page
+            where id starts from 1
     '''
     pdf=fitz.open(pdfname)
 
     pages=range(len(pdf))
 
     if page_range is not None:
-        pages=ext_elements_in_range(pages, page_range, page_mode=page_mode)
+        pages=ext_elements_by_range(pages, page_range, keep_end=True, one_started=True)
 
     for p in pages:
-        i=p
-        if page_mode:
-            i+=1
-        yield i, pdf[p]
+        yield p+1, pdf[p]
 
 # write functions
 def write_page_to_file(page, fname):
     page_to_image(page, write_to_file=fname)
 
 def write_pdf_to_dir_image(pdfname, dir_image='pages',
-                            fname_format='page-%i.png', page_range=None, page_mode=True):
+                            fname_format='page-%i.png', page_range=None):
     '''
         extract pages in a PDF to a directory
     '''
@@ -94,8 +95,8 @@ def write_pdf_to_dir_image(pdfname, dir_image='pages',
     # format for image file name
     f=lambda p, fmt=fname_format: fmt % p
 
-    for i, page in yield_fitz_pages_from_pdf(pdfname, page_range=page_range, page_mode=page_mode):
-        fname=os.path.join(dir_image, f(i))
+    for pageid, page in yield_fitz_pages_from_pdf(pdfname, page_range=page_range):
+        fname=os.path.join(dir_image, f(pageid))
         print('write to %s' % fname)
 
         write_page_to_file(page, fname)
@@ -107,7 +108,6 @@ def mkpdf_from_images(pdf_out, images, pagesize='a4', page_scale=1, **kwargs):
 
         optional keyword arguments:
             page_range
-            page_mode
             fname_format
     '''
     if type(pagesize) is str:
@@ -119,7 +119,7 @@ def mkpdf_from_images(pdf_out, images, pagesize='a4', page_scale=1, **kwargs):
 
     c=canvas.Canvas(pdf_out, pagesize=pagesize)
 
-    for i, p in enumerate(yield_images(images, page_range=page_range)):
+    for i, p in enumerate(yield_images(images, **kwargs)):
         if type(p) is str:
             print('add page %i: %s' % (i+1, p))
         else:
@@ -193,18 +193,20 @@ def yield_images(images, **kwargs):
 def yield_images_from_list(images, page_range=None):
     '''
         yield PIL image from list
+
+        page_range must be given with one_started=False and keep_end=False
     '''
     if page_range is not None:
-        images=ext_elements_in_range(images, page_range)
+        images=ext_elements_by_range(images, ele_range=page_range, keep_end=False, one_started=False)
         
     for img in images:
         yield img
 
-def yield_images_from_pdf(pdfname, page_mode=True, **kwargs):
+def yield_images_from_pdf(pdfname, **kwargs):
     '''
         yield PIL image from PDF file
     '''
-    for _, page in yield_fitz_pages_from_pdf(pdfname, page_mode=page_mode, **kwargs):
+    for _, page in yield_fitz_pages_from_pdf(pdfname, **kwargs):
         yield page_to_image(page)
 
 def yield_images_from_dir(dir_images, **kwargs):
@@ -213,20 +215,12 @@ def yield_images_from_dir(dir_images, **kwargs):
 
 # image operations
 ## crop image
-def crop_image(img, *args):
+def crop_image(img, left=0, right=1, upper=0, lower=1):
     '''
         `left, upper, width, height` are given as a ratio to the image size
             generally ranging from 0 to 1
     '''
-    if len(args)==1:
-        left, right, upper, lower=args[0]
-    elif len(args)==2:
-        (left, right), (upper, lower)=args
-    else:
-        left, right, upper, lower=args
-
     w, h=img.size
-
 
     left=w*left
     upper=h*upper
@@ -234,19 +228,16 @@ def crop_image(img, *args):
     right=w*right
     lower=h*lower
 
-    # width=w*width
-    # height=h*height
-
-    # right=left+width
-    # lower=upper+height
-
     return img.crop(box=(left, upper, right, lower))
 
 def split_images_horizontal(dir_images, page_range=None, dir_out=None,
-                prefix_fmt='page-%i', prefix_out_fmt='crop-%i', fig_suffix='.png'):
+                prefix_fmt='page-%i', prefix_out_fmt='crop-%i', fig_suffix='.png',
+                sep=0.5, ncrop_starts=1):
     '''
         split each page in a directory `dir_images` within in range `page_range`
-            equally into 2 parts in horizontal direction
+            into 2 parts in horizontal direction
+                of which fraction is given by `sep`
+                    that means two parts are (0, sep) and (sep 1)
     '''
     if dir_out is None:
         dir_out=dir_images
@@ -257,18 +248,17 @@ def split_images_horizontal(dir_images, page_range=None, dir_out=None,
     fnames=list_files_by_range_fmt(dir_images, page_range=page_range,
                     fname_format=(prefix_fmt+fig_suffix))
 
-    ncrop=1
+    ncrop=ncrop_starts
     for fname in fnames:
-        print('split', fname)
+        print('split %s ==> crop %i, %i' % (fname, ncrop, ncrop+1))
         img=Image.open(fname)
 
         outfname=os.path.join(dir_out,  (prefix_out_fmt  % ncrop)+fig_suffix)
-        crop=crop_image(img, 0, 0.5, 0, 1)
+        crop=crop_image(img, right=sep)
         crop.save(outfname)
         ncrop+=1
 
         outfname=os.path.join(dir_out,  (prefix_out_fmt  % ncrop)+fig_suffix)
-        crop=crop_image(img, 0.5, 1, 0, 1)
+        crop=crop_image(img, left=sep)
         crop.save(outfname)
         ncrop+=1
-
