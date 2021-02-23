@@ -5,14 +5,15 @@ Functions for PDF file
 '''
 
 from .funcs_rw import open_pdf_as_reader, new_writer, write_pdf_to
-from .funcs_page import page_clean_annots
+from .funcs_page import page_clean_annots, page_resize
 from .funcs_outline import get_outlines_from_reader, add_outlines
 from .funcs_pagelabel import get_pagelabels_from_reader, add_pagelabels
 from .funcs_path import ext_elements_by_range
 
 # pdf copy
 def copy_pdf(pdf_old, pdf_new=None, writer=None, page_range=None, 
-                keep_annots=False, keep_outlines=True, keep_pagelabels=True):
+                keep_annots=False, keep_outlines=True, keep_pagelabels=True,
+                pagesize=None, pagescale=None, keep_ratio=True):
     '''
         copy a pdf
 
@@ -34,6 +35,7 @@ def copy_pdf(pdf_old, pdf_new=None, writer=None, page_range=None,
     n_annots=0
     print('to copy %i pages' % len(pages))
     for i in pages:
+        print('add page', i+1)
         page=reader.getPage(i)
 
         if not keep_annots:
@@ -42,6 +44,9 @@ def copy_pdf(pdf_old, pdf_new=None, writer=None, page_range=None,
 
             if n:
                 print('    del %i annots in page %i' % (n, i+1))
+
+        if pagesize is not None or pagescale is not None:
+            page_resize(page, pagesize, pagescale, keep_ratio)
 
         writer.addPage(page)
 

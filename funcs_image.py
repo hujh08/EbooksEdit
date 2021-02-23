@@ -18,12 +18,11 @@ from PIL import Image
 
 import fitz
 
-from reportlab.lib import pagesizes as PageSizes
-# from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 
 from .funcs_path import ext_elements_by_range, list_files_by_range_fmt
+from .funcs_page import get_pagesize_by_name
 
 # convert page to PIL Image
 def page_to_image(page, write_to_file=None, **kwargs):
@@ -102,7 +101,7 @@ def write_pdf_to_dir_image(pdfname, dir_image='pages',
         write_page_to_file(page, fname)
 
 # create pdf from images or other pdf
-def mkpdf_from_images(pdf_out, images, pagesize='a4', page_scale=1, **kwargs):
+def mkpdf_from_images(pdf_out, images, pagesize='a4', pagescale=None, **kwargs):
     '''
         make pdf from pages
 
@@ -110,12 +109,7 @@ def mkpdf_from_images(pdf_out, images, pagesize='a4', page_scale=1, **kwargs):
             page_range
             fname_format
     '''
-    if type(pagesize) is str:
-        pagesize=getattr(PageSizes, pagesize.upper())
-
-    if page_scale!=1:
-        # rescale the page size
-        pagesize=tuple([t*page_scale for t in pagesize])
+    pagesize=get_pagesize_by_name(pagesize, pagescale)
 
     c=canvas.Canvas(pdf_out, pagesize=pagesize)
 
@@ -132,7 +126,7 @@ def mkpdf_from_images(pdf_out, images, pagesize='a4', page_scale=1, **kwargs):
     c.save()
 
 ## auxilliary functions for canvas drawing
-def add_image_page(c, img, pagesize='a4'):
+def add_image_page(c, img):
     '''
         add image to a pdf canvas
 
@@ -143,17 +137,24 @@ def add_image_page(c, img, pagesize='a4'):
     if type(img) is str:
         img=Image.open(img)
 
-    if type(pagesize) is str:
-        pagesize=getattr(PageSizes, pagesize.upper())
+    pagesize=get_pagesize_of_canvas(c)
 
     rect=page_draw_region(pagesize, img.size)
     c.drawImage(ImageReader(img), *rect)
+
+def get_pagesize_of_canvas(c):
+    '''
+        pagesize of a canvas
+
+        more setup of canvas could refer to `c.__dict__`
+    '''
+    return c._pagesize
 
 def page_draw_region(pagesize, imgsize):
     '''
         determine draw region for an image in the page
 
-        return (left, top, right, bottom)
+        return (left, bottom, right, top)
     '''
     w0, h0=pagesize
     w1, h1=imgsize
@@ -169,10 +170,10 @@ def page_draw_region(pagesize, imgsize):
     left=dw/2
     right=left+w1
 
-    top=dh/2
-    bottom=top+h1
+    bottom=dh/2
+    top=bottom+h1
 
-    return left, top, right, bottom
+    return left, bottom, right, top
 
 ## yield images from image name list, image directory or PDF file
 def yield_images(images, **kwargs):
@@ -215,7 +216,7 @@ def yield_images_from_dir(dir_images, **kwargs):
 
 # image operations
 ## crop image
-def crop_image(img, left=0, right=1, upper=0, lower=1):
+def crop_image(img, left=0, right=1, lower=0, upper=1):
     '''
         `left, upper, width, height` are given as a ratio to the image size
             generally ranging from 0 to 1
@@ -228,7 +229,7 @@ def crop_image(img, left=0, right=1, upper=0, lower=1):
     right=w*right
     lower=h*lower
 
-    return img.crop(box=(left, upper, right, lower))
+    return img.crop(box=(left, lower, right, upper))
 
 def split_images_horizontal(dir_images, page_range=None, dir_out=None,
                 prefix_fmt='page-%i', prefix_out_fmt='crop-%i', fig_suffix='.png',

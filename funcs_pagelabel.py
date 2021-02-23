@@ -76,7 +76,7 @@ def add_pagelabels(writer, pagelabels):
     for page, *ss in pagelabels:
         if page>numpages-1:
             continue
-            
+
         add_pagelabel(writer, page, *ss)
     return len(pagelabels)
 
@@ -125,7 +125,10 @@ def get_pagelabels_from_reader(reader, page_shift=0):
     for i in range(0, n, 2):
         page=int(nums_array[i])+page_shift
 
-        ss=reader.getObject(nums_array[i+1])
+        ss=nums_array[i+1]
+        if isinstance(ss, PDF.IndirectObject):
+            # ss=reader.getObejct(ss)
+            ss=ss.getObejct()
         style=str(ss['/S'])
 
         pagelabel=[page, style]
