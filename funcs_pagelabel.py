@@ -71,7 +71,12 @@ def add_pagelabels(writer, pagelabels):
     '''
         add a list of page labels
     '''
+    numpages=writer.getNumPages()
+
     for page, *ss in pagelabels:
+        if page>numpages-1:
+            continue
+            
         add_pagelabel(writer, page, *ss)
     return len(pagelabels)
 
@@ -101,20 +106,24 @@ def locate_pagelabels_in_writer(writer, add_ifnot=False):
 
     return root_obj['/PageLabels']
 
-def get_pagelabels_from_reader(reader):
+def get_pagelabels_from_reader(reader, page_shift=0):
     '''
         get the page label object in PyPDF2 reader
 
         return a list of page labels, [page, style, start]
     '''
-    nums_array=get_root_of_rw(reader)['/PageLabels']['/Nums']
+    root_obj=get_root_of_rw(reader)
+    if '/PageLabels' not in root_obj:
+        return []
+
+    nums_array=root_obj['/PageLabels']['/Nums']
 
     n=len(nums_array)
     assert n % 2 == 0
 
     result=[]
     for i in range(0, n, 2):
-        page=int(nums_array[i])
+        page=int(nums_array[i])+page_shift
 
         ss=reader.getObject(nums_array[i+1])
         style=str(ss['/S'])

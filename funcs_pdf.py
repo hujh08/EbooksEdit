@@ -11,7 +11,7 @@ from .funcs_pagelabel import get_pagelabels_from_reader, add_pagelabels
 from .funcs_path import ext_elements_by_range
 
 # pdf copy
-def copy_pdf(pdf_old, pdf_new=None, page_range=None,
+def copy_pdf(pdf_old, pdf_new=None, writer=None, page_range=None, 
                 keep_annots=False, keep_outlines=True, keep_pagelabels=True):
     '''
         copy a pdf
@@ -27,17 +27,21 @@ def copy_pdf(pdf_old, pdf_new=None, page_range=None,
     print('number of pages in pdf: %i' % len(pages))
 
     # copy pages from reader
-    writer=new_writer()
+    if writer is None:
+        writer=new_writer()
+    page_shift=writer.getNumPages()  # in case for not empty writer
+
     n_annots=0
-    print('copy pages:')
-    for i in range(nump):
+    print('copy pages ...')
+    for i in pages:
         page=reader.getPage(i)
 
         if not keep_annots:
             n=page_clean_annots(page)
             n_annots+=n
 
-            print('    del %i annots in page %i' % (n, i))
+            if n:
+                print('    del %i annots in page %i' % (n, i))
 
         writer.addPage(page)
 
@@ -46,15 +50,44 @@ def copy_pdf(pdf_old, pdf_new=None, page_range=None,
 
     # outline
     if keep_outlines:
-        outlines=get_outlines_from_reader(reader)
+        outlines=get_outlines_from_reader(reader, page_shift=page_shift)
         n=add_outlines(writer, outlines)
         print('add %i outlines' % n)
 
     # page labels
     if keep_pagelabels:
-        pagelabels=get_pagelabels_from_reader(reader)
+        pagelabels=get_pagelabels_from_reader(reader, page_shift=page_shift)
         n=add_pagelabels(writer, pagelabels)
         print('add %i pagelabels' % n)
+
+    # write
+    if pdf_new is None:
+        return writer
+
+    write_pdf_to(pdf_new, writer)
+
+# merge PDF files
+def merge_pdfs(pdfs, pdf_new=None, writer=None,
+                keep_outlines=False, keep_pagelabels=False, **kwargs):
+    '''
+        merge multiply of PDF files
+
+        element in `pdfs` could a file name or array [file name, page_range]
+    '''
+    if writer is None:
+        writer=new_writer()
+
+    for fname in pdfs:
+        kw=kwargs.copy()
+
+        if type(fname) is not str:
+            fname, page_range=fname
+            kw['page_range']=page_range  # cover the global set in kwargs
+
+        print('==== merge pdf %s ====' % fname)
+        copy_pdf(fname, writer=writer, keep_outlines=keep_outlines,
+                                       keep_pagelabels=keep_pagelabels, **kw)
+        print()
 
     # write
     if pdf_new is None:

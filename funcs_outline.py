@@ -10,7 +10,7 @@ import re
 from .funcs_rw import open_pdf_as_reader
 
 # from pdf
-def get_outlines_from_reader(reader):
+def get_outlines_from_reader(reader, page_shift=0):
     '''
         return list of entries [title, page number, level]
             where
@@ -18,16 +18,16 @@ def get_outlines_from_reader(reader):
                 `page number` also starts from 0
     '''
     outlines=reader.getOutlines()
-    return parse_outlines_list(outlines, reader)
+    return parse_outlines_list(outlines, reader, page_shift=page_shift)
 
-def get_outlines_from_pdf(pdfname):
+def get_outlines_from_pdf(pdfname, page_shift=0):
     '''
         get outlines from a pdf file
     '''
     reader=open_pdf_as_reader(pdfname)
-    return get_outlines_from_reader(reader)
+    return get_outlines_from_reader(reader, page_shift=page_shift)
 
-def parse_outlines_list(outlines, reader, level=0):
+def parse_outlines_list(outlines, reader, level=0, page_shift=0):
     '''
         parse outline list gotten directly from PyPDF2 reader
 
@@ -40,14 +40,14 @@ def parse_outlines_list(outlines, reader, level=0):
     result=[]
     for entry in outlines:
         if '/Title' not in entry:
-            suboutlines=parse_outlines_list(entry, reader, level+1)
+            suboutlines=parse_outlines_list(entry, reader, level+1, page_shift)
             result.extend(suboutlines)
 
             continue
 
         title=entry['/Title']
         page=reader.getDestinationPageNumber(entry)
-        result.append([title, page, level])
+        result.append([title, page+page_shift, level])
 
     return result
 
@@ -147,12 +147,20 @@ def add_outlines(writer, outlines):
         add outlines given by a list of entries [title, page number, level]
 
         return number of outlines added
+
+        `exclude_invalid`: exclude invalid outline
+            which refer to page out of writer
     '''
+    numpages=writer.getNumPages()
+
     parents=[]
     parent=None
     level_now=-1
     n=0
     for title, page, level in outlines:
+        if page>numpages-1:
+            continue
+
         if level>level_now:
             assert level==level_now+1
             level_now=level
