@@ -28,9 +28,9 @@ def list_files_in_dir(dir_images='.', fname_format=None):
         return fnames_dir
 
     if fname_format is None:
-        inds=parse_format_fnames(fnames)
+        inds=get_orderkey_for_fnames(fnames)
 
-    return [fnames_dir[i] for i in argsort_fnames(fnames, inds)]
+    return sort_fnames(fnames_dir, key=inds)
 
 def list_files_by_range_fmt(dir_images='.', fname_format=None, page_range=None):
     '''
@@ -50,12 +50,6 @@ def list_files_by_range_fmt(dir_images='.', fname_format=None, page_range=None):
     return fnames
 
 # sort functions
-def argsort_fnames(fnames, key=None):
-    if key is None:
-        return argsort(fnames)
-
-    return argsort(key)
-
 def argsort(array):
     '''
         argsort array
@@ -63,6 +57,12 @@ def argsort(array):
     inds=list(range(len(array)))
     pairs=list(zip(inds, array))
     return [i for i, _ in sorted(pairs, key=lambda s: s[1])]
+
+def sort_fnames(fnames, key=None):
+    if key is None:
+        key=get_orderkey_for_fnames(fnames)
+
+    return [fnames[i] for i in argsort(key)]
 
 # operations to a list of fnames
 def join_path_to_fnames(fnames, parent):
@@ -81,38 +81,30 @@ def list_regular_files(directory='.'):
             yield name
 
 # file name format
-def parse_format_fnames(fnames, return_fmt=False):
+def get_orderkey_for_fnames(fnames):
     '''
-        extract a global format for a list of file names
-            which is of the form: ${PREFIX}${INDEX}${SUFFIX}
+        get a key for the fnames sorting
 
-        if format not exists, return None
-
-        if exists, return indices for files
+        extract thd digit slice in fname
+            and different kind order for string and digit
     '''
-    ptn=re.compile(r'(\D*)(\d*)(.*)')
+    ptn=re.compile(r'(\d+)')  # pattern for split
 
-    p=fnames[0]
-    PREFIX, num, SUFFIX=ptn.match(p).groups()
-    if not num:
-        return None
+    inds=[]
+    for fname in fnames:
+        segs=ptn.split(fname)
 
-    indices=[int(num)]
-    samefmt=True
-    for p in fnames[1:]:
-        pref, num, suff=ptn.match(p).groups()
-        if (not num) or (pref != PREFIX) or (suff != SUFFIX):
-            samefmt=False
-            break
-        indices.append(int(num))
+        digits=[]
+        chars=[]
+        for s in segs:
+            if ptn.match(s):
+                digits.append(int(s))
+            else:
+                chars.append(s)
 
-    if not samefmt:
-        return None
+        inds.append((tuple(chars), tuple(digits)))
 
-    if return_fmt:
-        return PREFIX, SUFFIX, indices
-
-    return indices
+    return inds
 
 ## filter by format
 def filter_fnames_by_format(fnames, strformat):
