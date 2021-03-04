@@ -84,5 +84,30 @@ def get_pagesize_of(page):
 
     return float(x1-x0), float(y1-y0)
 
+# add blank pages
+def add_blank_page_after(writer, page):
+    '''
+        add blank page after `page`
+
+        `page` is an index started from 1
+    '''
+    writer.insertBlankPage(index=page)
+
+def add_blank_pages_after(writer, pages):
+    '''
+        add blank page after `page`
+
+        page in `pages` is an index started from 1
+    '''
+    if isinstance(pages, numbers.Integral):
+        # only adding one page
+        add_blank_page_after(writer, pages)
+        return 1
+
+    for page in sorted(pages, reverse=True):
+        add_blank_page_after(writer, page)
+
+    return len(pages)
+
 
 

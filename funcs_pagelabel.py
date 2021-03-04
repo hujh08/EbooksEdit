@@ -14,7 +14,8 @@ _map_style={'roman lowercase': '/r',
             'roman uppercase': '/R',
             'arabic': '/D'}
 _alias_style={'roman lowercase': ['roman'],
-              'roman uppercase': ['Roman', 'Roman']}
+              'roman uppercase': ['Roman', 'ROMAN'],
+              'arabic': ['nums', 'Nums', 'NUMS']}
 for name, aliases in _alias_style.items():
     s=_map_style[name]
     for a in aliases:
@@ -79,6 +80,19 @@ def add_pagelabels(writer, pagelabels):
 
         add_pagelabel(writer, page, *ss)
     return len(pagelabels)
+
+## frequently used functions
+def add_pagelabel_head(writer, num_head, style=None):
+    '''
+        add page label to head pages
+    '''
+    if style is None:
+        style='roman'
+
+    add_pagelabel(writer, 0, style=style)
+    add_pagelabel(writer, num_head, style='arabic')
+
+    return num_head
 
 # get page labels
 def locate_pagelabels_in_writer(writer, add_ifnot=False):

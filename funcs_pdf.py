@@ -5,9 +5,9 @@ Functions for PDF file
 '''
 
 from .funcs_rw import open_pdf_as_reader, new_writer, write_pdf_to
-from .funcs_page import page_clean_annots, page_resize
-from .funcs_outline import get_outlines_from_reader, add_outlines
-from .funcs_pagelabel import get_pagelabels_from_reader, add_pagelabels
+from .funcs_page import page_clean_annots, page_resize, add_blank_pages_after
+from .funcs_outline import get_outlines_from_reader, add_outlines, get_outlines_from_txt
+from .funcs_pagelabel import get_pagelabels_from_reader, add_pagelabels, add_pagelabel_head
 from .funcs_path import ext_elements_by_range
 
 # pdf copy
@@ -93,6 +93,37 @@ def merge_pdfs(pdfs, pdf_new=None, writer=None,
         copy_pdf(fname, writer=writer, keep_outlines=keep_outlines,
                                        keep_pagelabels=keep_pagelabels, **kw)
         print()
+
+    # write
+    if pdf_new is None:
+        return writer
+
+    write_pdf_to(pdf_new, writer)
+
+# frequently used functions
+def pdf_edit_headlabel_outline(pdf_old, pdf_new=None, num_headpage=0, foutline=None,
+                                blank_pages=None, keep_annots=False,
+                                **kwargs):
+    '''
+        edit a pdf file, adding page label to head pages and adding outlines
+    '''
+    writer=copy_pdf(pdf_old, keep_annots=keep_annots,
+                             keep_outlines=False,
+                             keep_pagelabels=False)
+
+    if blank_pages is not None:
+        n=add_blank_pages_after(writer, blank_pages)
+        print('add %i blank pages' % n)
+
+    if num_headpage>0:
+        n=add_pagelabel_head(writer, num_headpage)
+        print('add head page labels', n)
+
+    if foutline is not None:
+        outlines=get_outlines_from_txt(foutline, offset=num_headpage, **kwargs)
+
+        n=add_outlines(writer, outlines)
+        print('add %i outlines' % n)
 
     # write
     if pdf_new is None:

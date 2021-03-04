@@ -63,6 +63,7 @@ def get_outlines_from_txt(fname, offset=0, lstrip=True, func_level=None):
             level is optional
                 which is given by appending to the page number
                     seperated with letter `L`, ignoring case
+            page is the page number which starts from 1
 
         Parameter:
             func_level: None, int, string, or callable
@@ -106,7 +107,8 @@ def get_outlines_from_txt(fname, offset=0, lstrip=True, func_level=None):
             if level is None:
                 level=func_level(title, page)
 
-            result.append([title, page+offset, level])
+            # minus 1 since page number in text starts from 1
+            result.append([title, page+offset-1, level])
 
     return result
 
@@ -129,7 +131,7 @@ def pagenum_parse(pnumstr):
     return int(num), int(level)
 
 ## some named functions for level parser
-def level_parser_sec(title, page):
+def level_parser_sec(title, page, level_default=0):
     '''
         parse level from the section id
             which is given by like 1.1 for level 1
@@ -139,7 +141,45 @@ def level_parser_sec(title, page):
     if m:
         return len(m.groups()[0].split('.'))-1
 
-    return 0
+    return level_default
+
+def get_level_parser_map(level_map, level_default=0):
+    '''
+        get a level parser which is based on a map from title starting to level
+    '''
+    if str(level_map) is not dict:
+        # if not dict, must be [(list of strings, level)]
+        level_list=level_map
+        level_map={}
+        for names, level in level_list:
+            if type(names) is not str:
+                for n in names:
+                    level_map[n]=level
+            else:
+                level_map[names]=level
+
+    def parser(title, page, level_default=level_default):
+        starting=title.split(maxsplit=1)[0]
+        if starting in level_map:
+            return level_map[starting]
+        return level_default
+
+    return parser
+
+def combine_level_parser(*parsers, level_default=0):
+    '''
+        combine a list of parsers
+    '''
+    def parser(title, page, level_default=level_default):
+        for f in parsers:
+            level=f(title, page, level_default=None)
+
+            if level is not None:
+                return level
+
+        return level_default
+
+    return parser
 
 # add outlines
 def add_outlines(writer, outlines):
@@ -174,3 +214,12 @@ def add_outlines(writer, outlines):
         n+=1
 
     return n
+
+# write to text
+def write_outline_to_txt(fname, outlines):
+    '''
+        write a outline list to a text file
+    '''
+    with open(fname, 'w') as f:
+        for title, page, level in outlines:
+            f.write('%s %iL%i\n' % (title, page, level))
