@@ -43,7 +43,8 @@ def list_files_by_range_fmt(dir_images='.', fname_format=None, page_range=None):
             raise Exception('fname format is not given')
 
         fnames=[]
-        for p in ext_elements_by_range(ele_range=page_range):
+        for p in ext_elements_by_range(ele_range=page_range,
+                                        keep_end=True): # always keep end
             fname=os.path.join(dir_images, fname_format % p)
             fnames.append(fname)
 
