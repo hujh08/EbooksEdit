@@ -141,8 +141,8 @@ def get_pagelabels_from_reader(reader, page_shift=0):
 
         ss=nums_array[i+1]
         if isinstance(ss, PDF.IndirectObject):
-            # ss=reader.getObejct(ss)
-            ss=ss.getObejct()
+            # ss=reader.getObject(ss)
+            ss=ss.getObject()
         style=str(ss['/S'])
 
         pagelabel=[page, style]
