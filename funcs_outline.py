@@ -2,6 +2,12 @@
 
 '''
 Functions for PDF outline
+
+two types of representation: nest (nested list), level (explicit level specified)
+    nest: a nested list,
+        e.g. [(t1, p1), [(t2, p2), (t3, p3)]]
+    level: level is specified explicitly,
+        e.g. [(t1, p1, 0), (t2, p2, 1), (t3, p3 1)]
 '''
 
 import numbers
@@ -37,17 +43,29 @@ def parse_outlines_list(outlines, reader, level=0, page_shift=0):
             level: int
                 current outline level
     '''
+    result=parse_outlines_nest(outlines, reader, page_shift=page_shift)
+
+    return outline_nest_to_level(result, level=level)
+
+def parse_outlines_nest(outlines, reader, page_shift=0):
+    '''
+        parse outline list gotten directly from PyPDF2 reader
+
+        return nested outlines, [(t1, p1), [(t2, p2), (t3, p3)]]
+
+        Parameters:
+            page_shift: int
+    '''
     result=[]
     for entry in outlines:
-        if '/Title' not in entry:
-            suboutlines=parse_outlines_list(entry, reader, level+1, page_shift)
-            result.extend(suboutlines)
-
+        if '/Title' in entry:
+            title=entry['/Title']
+            page=reader.getDestinationPageNumber(entry)
+            result.append([title, page+page_shift])
             continue
 
-        title=entry['/Title']
-        page=reader.getDestinationPageNumber(entry)
-        result.append([title, page+page_shift, level])
+        subout=parse_outlines_nest(entry, reader, page_shift=page_shift)
+        result.append(subout)
 
     return result
 
@@ -181,8 +199,100 @@ def combine_level_parser(*parsers, level_default=0):
 
     return parser
 
+# two types of representation of outlines: nest (nested list), level (explicit level specified)
+def outline_nest_to_level(outlines, level=0):
+    '''
+        convert nested outlines to explicit level
+
+        two structures to store outlines
+            nest: a nested list,
+                e.g. [(t1, p1), [(t2, p2), (t3, p3)]]
+            level: level is specified explicitly,
+                e.g. [(t1, p1, 0), (t2, p2, 1), (t3, p3 1)]
+
+        Parameter:
+            level: int
+                level of top outline
+    '''
+    is_atom=is_outline_entry
+
+    result=[]
+    for (title, page), level in iter_nested_list(outlines, level, is_atom=is_atom):
+        result.append([title, page, level])
+    return result
+
+def outline_level_to_nest(outlines):
+    '''
+        convert explicit level outlines to nest type
+
+        two structures to store outlines
+            nest: a nested list,
+                e.g. [(t1, p1), [(t2, p2), (t3, p3)]]
+            level: level is specified explicitly,
+                e.g. [(t1, p1, 0), (t2, p2, 1), (t3, p3 1)]
+    '''
+    parents=[]
+    parent=[]
+    level_prev=None
+
+    result=parent
+    for title, page, level in outlines:
+        if level_prev is None:
+            level_prev=level
+
+        if level>level_prev:
+            parents.append((parent, level_prev))
+            
+            parent.append([])
+            parent=parent[-1]
+        elif level<level_prev:
+            assert parents
+
+            while parents:
+                parent, l0=parents.pop()
+                if l0<=level:
+                    break
+
+            assert l0==level # not allowed new level, which not existed before
+
+        parent.append([title, page])
+        level_prev=level
+
+    return result
+
+## auxilliary function
+def is_outline_entry(e):
+    '''
+        determine wheter an entry is outline type, that is [title, page]
+            in a nested structure of outlines
+    '''
+    return not hasattr(e[-1], '__iter__')
+
+def iter_nested_list(root, level=0, is_atom=lambda e: not hasattr(e, '__iter__')):
+    '''
+        iter in the nested list
+
+        return element, level
+
+        Parameter:
+            level: int
+                top level for the nested list
+
+            is_atom: callable
+                determine whether current element is an atom,
+                    if so, it would be returned
+    '''
+    assert hasattr(root, '__iter__')
+
+    for e in root:
+        if is_atom(e):
+            yield e, level
+        else:
+            for a in iter_nested_list(e, level+1, is_atom=is_atom):
+                yield a
+
 # add outlines
-def add_outlines(writer, outlines):
+def add_outlines(writer, outlines, parent=None):
     '''
         add outlines given by a list of entries [title, page number, level]
 
@@ -193,25 +303,28 @@ def add_outlines(writer, outlines):
     '''
     numpages=writer.getNumPages()
 
-    parents=[]
-    parent=None
-    level_now=-1
+    outlines_nest=outline_level_to_nest(outlines)
+
+    return add_outlines_nest(writer, outlines_nest)
+
+def add_outlines_nest(writer, outlines, parent=None):
+    '''
+        add outlines given by a nested type
+
+        return number of outlines added
+
+    '''
     n=0
-    for title, page, level in outlines:
-        if page>numpages-1:
-            continue
+    bm=None
+    for entry in outlines:
+        if is_outline_entry(entry):
+            title, page=entry
+            bm=writer.addBookmark(title, page, parent)
 
-        if level>level_now:
-            assert level==level_now+1
-            level_now=level
-            parents.append(parent)
-        elif level<level_now:
-            for _ in range(level_now-level):
-                parents.pop()
-            level_now=level
-
-        parent=writer.addBookmark(title, page, parents[-1])
-        n+=1
+            n+=1
+        else:
+            assert bm is not None  # not allow empty parent
+            n+=add_outlines_nest(writer, entry, bm)
 
     return n
 
@@ -223,3 +336,84 @@ def write_outline_to_txt(fname, outlines):
     with open(fname, 'w') as f:
         for title, page, level in outlines:
             f.write('%s %iL%i\n' % (title, page, level))
+
+def write_outline_nest_to_txt(fname, outlines, delimiters=('/*', '*/')):
+    '''
+        write nested outlines to a text file
+    '''
+    if type(delimiters) is str:
+        d0=d1=delimiters
+    else:
+        d0, d1=delimiters
+
+    with open(fname, 'w') as f:
+        _write_outline_nest(f, outlines, d0, d1, 0)
+
+def _write_outline_nest(f, outlines, d0, d1, i):
+    '''
+        real work of function `write_outline_nest_to_txt`
+
+        next i would be returned
+
+        Parameter:
+            d0, d1: str
+                start/end delimiters
+                it could be different, like {, },
+                    or same for both , like ======
+
+            i: int
+                id of a delimiter
+    '''
+    i0=i
+    i+=1
+
+    f.write('%s quote %i\n' % (d0, i0))
+    for entry in outlines:
+        if is_outline_entry(entry):
+            title, page=entry
+            f.write('%s %i\n' % (title, page))
+        else:
+            i=_write_outline_nest(f, entry, d0, d1, i)
+    f.write('%s quote %i\n' % (d1, i0))
+
+    return i
+
+# read nested text file
+def get_outlines_from_nest_txt(fname, delimiters=('/*', '*/'), lstrip=True):
+    '''
+        get outline from nested text file
+    '''
+    # strip
+    strip=lambda line: line.rstrip()
+    if lstrip:
+        strip=lambda line: line.strip()
+
+    # delimiters
+    if type(delimiters) is str:
+        d0=d1=delimiters
+    else:
+        d0, d1=delimiters
+
+    parents=[]
+    holder=None
+
+    root=[]
+    with open(fname) as f:
+        for line in f:
+            if line.startswith(d0):
+                parents.append(holder)
+
+                if holder is None:
+                    holder=root
+                else:
+                    holder.append([])
+                    holder=holder[-1]
+            elif line.startswith(d1):
+                holder=parents.pop()
+            else:
+                title, page=strip(line).rsplit(maxsplit=1)
+                holder.append([title, int(page)])
+
+    assert not parents
+
+    return root
