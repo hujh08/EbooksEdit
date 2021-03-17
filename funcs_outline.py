@@ -47,7 +47,7 @@ def parse_outlines_list(outlines, reader, level=0, page_shift=0):
 
     return outline_nest_to_level(result, level=level)
 
-def parse_outlines_nest(outlines, reader, page_shift=0):
+def parse_outlines_nest(outlines, reader, page_shift=0, remove_unprintable=True):
     '''
         parse outline list gotten directly from PyPDF2 reader
 
@@ -55,11 +55,17 @@ def parse_outlines_nest(outlines, reader, page_shift=0):
 
         Parameters:
             page_shift: int
+
+            remove_unprintable: bool
+                wheter remove unprintable char, e.g. '\x00'
     '''
     result=[]
     for entry in outlines:
         if '/Title' in entry:
             title=entry['/Title']
+            if remove_unprintable:
+                title=str_clean_unprintable(title)
+
             page=reader.getDestinationPageNumber(entry)
             result.append([title, page+page_shift])
             continue
@@ -68,6 +74,12 @@ def parse_outlines_nest(outlines, reader, page_shift=0):
         result.append(subout)
 
     return result
+
+def str_clean_unprintable(s):
+    '''
+        remove unprintable chars, like '\x00'
+    '''
+    return ''.join([i for i in s if i.isprintable()])
 
 # from txt file
 def get_outlines_from_txt(fname, offset=0, lstrip=True, func_level=None):
