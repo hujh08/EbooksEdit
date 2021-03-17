@@ -167,7 +167,7 @@ def level_parser_sec(title, page, level_default=0):
             which is given by like 1.1 for level 1
     '''
     sec, *_=title.split(maxsplit=1)
-    m=re.match(r'([\dIVX]+(\.\d+)*)\s', title)
+    m=re.search(r'([\dIVX]+(\.\d+)*)', sec)
     if m:
         return len(m.groups()[0].split('.'))-1
 
