@@ -79,6 +79,8 @@ def str_clean_unprintable(s):
     '''
         remove unprintable chars, like '\x00'
     '''
+    if isinstance(s, bytes):  # element in bytes would be int, i.e. type(s[0]) is int
+        s=s.decode()
     return ''.join([i for i in s if i.isprintable()])
 
 # from txt file
