@@ -7,13 +7,13 @@ Functions for PDF reader/writer
 from PyPDF2 import PdfFileReader, PdfFileWriter
 
 # pdf reader
-def open_pdf_as_reader(pdfname):
+def open_pdf_as_reader(pdfname, **kwargs):
     '''
         open a pdf file
 
         return a PyPDF2 reader
     '''
-    return PdfFileReader(open(pdfname, 'rb'))
+    return PdfFileReader(open(pdfname, 'rb'), **kwargs)
 
 def get_root_of_reader(reader):
     '''

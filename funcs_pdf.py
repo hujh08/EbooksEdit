@@ -13,13 +13,14 @@ from .funcs_path import ext_elements_by_range
 # pdf copy
 def copy_pdf(pdf_old, pdf_new=None, writer=None, page_range=None, 
                 keep_annots=False, keep_outlines=True, keep_pagelabels=True,
-                pagesize=None, pagescale=None, keep_ratio=True):
+                pagesize=None, pagescale=None, keep_ratio=True,
+                strict=False, **kwargs):
     '''
         copy a pdf
 
         page_range must be given with one_started=True and keep_end=True
     '''
-    reader=open_pdf_as_reader(pdf_old)
+    reader=open_pdf_as_reader(pdf_old, strict=strict, **kwargs)
     nump=reader.getNumPages()
 
     pages=range(nump)
