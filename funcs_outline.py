@@ -13,6 +13,8 @@ two types of representation: nest (nested list), level (explicit level specified
 import numbers
 import re
 
+from PyPDF2.generic import NullObject
+
 from .funcs_rw import open_pdf_as_reader
 
 # from pdf
@@ -66,8 +68,12 @@ def parse_outlines_nest(outlines, reader, page_shift=0, remove_unprintable=True)
             if remove_unprintable:
                 title=str_clean_unprintable(title)
 
-            page=reader.getDestinationPageNumber(entry)
-            result.append([title, page+page_shift])
+            if isinstance(entry.getDestArray()[0], NullObject):
+                page=-1
+            else:
+                page=reader.getDestinationPageNumber(entry)
+                page+=page_shift
+            result.append([title, page])
             continue
 
         subout=parse_outlines_nest(entry, reader, page_shift=page_shift)
