@@ -66,6 +66,8 @@ def page_resize(page, pagesize=None, scale=None, keep_ratio=True):
             # scale=(sx, sy), scale in both axes
             page.scale(*scale)
 
+        page.cropBox=page.mediaBox
+
         return
 
     pagesize=get_pagesize_by_name(pagesize, scale)
@@ -75,6 +77,8 @@ def page_resize(page, pagesize=None, scale=None, keep_ratio=True):
         page.scaleBy(min(w/w0, h/h0))
     else:
         page.scaleTo(*pagesize)
+    
+    page.cropBox=page.mediaBox
 
 def get_pagesize_of(page):
     '''

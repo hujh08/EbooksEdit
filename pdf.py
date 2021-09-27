@@ -10,17 +10,25 @@ class PDFEditor:
     '''
         class to handle pdf operations
     '''
-    def __init__(self, pdfname):
+    def __init__(self, pdfname=None):
         '''
             open a pdf file and initiate a writer
         '''
-        self.reader=PdfFileReader(open(pdfname, 'rb'))
-        nump=self.reader.getNumPages()
-
         self.writer=PdfFileWriter()
 
+        if pdfname is not None:
+            self.load_pdf(pdfname)
+
+    # copy pdf pages
+    def load_pdf(self, pdfname):
+        '''
+            load pdf file
+        '''
+        reader=PdfFileReader(open(pdfname, 'rb'))
+        nump=reader.getNumPages()
+
         for i in range(nump):
-            page=self.reader.getPage(i)
+            page=reader.getPage(i)
             self.writer.addPage(page)
 
     # annotation

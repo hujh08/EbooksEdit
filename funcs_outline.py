@@ -69,6 +69,7 @@ def parse_outlines_nest(outlines, reader, page_shift=0, remove_unprintable=True)
                 title=str_clean_unprintable(title)
 
             if isinstance(entry.getDestArray()[0], NullObject):
+            # if not hasattr(entry.getDestArray()[0], 'idnum'):
                 page=-1
             else:
                 page=reader.getDestinationPageNumber(entry)
