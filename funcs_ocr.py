@@ -22,7 +22,7 @@ def ocr_image(fname):
         _cnocr=CnOcr()
     
     res=_cnocr.ocr(fname)
-    text='\n'.join([''.join(t) for t in res])
+    text='\n'.join([''.join(chars) for chars, prob in res])
 
     return text
 
