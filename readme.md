@@ -9,6 +9,11 @@ PyMuPDF
 reportlab
 cnocr
 
+# Error solution
+
+## fitz
+`pip3 install pymupdf`
+
 # ele_range
 `ele_range` is a frequently used argument to specify multiply elements in a array-like object, like pages in pdf, files in directory and indices for regular array.
 

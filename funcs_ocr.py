@@ -14,15 +14,26 @@ from cnocr import CnOcr
 from .funcs_path import list_files_by_range_fmt
 
 _cnocr=None    # a global ocr
-def ocr_image(fname):
+def ocr_image(fname, score=None, lang='en'):
     print('OCR %s' % fname)
 
     global _cnocr
     if _cnocr is None:
-        _cnocr=CnOcr()
+        # if lang=='en':
+        #     _cnocr=CnOcr(det_model_name='naive_det', rec_model_name='en_PP-OCRv3')
+        # else:
+        _cnocr=CnOcr(det_model_name='naive_det')
     
-    res=_cnocr.ocr(fname)
-    text='\n'.join([''.join(chars) for chars, prob in res])
+    # text='\n'.join([''.join(data['text']) for data in res])
+    lines=[]
+    for data in _cnocr.ocr(fname):
+        if score is not None and data['score']<score:
+            # skip text of too low score
+            continue
+
+        lines.append(data['text'])
+
+    text='\n'.join(lines)
 
     return text
 

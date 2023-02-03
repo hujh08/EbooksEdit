@@ -4,24 +4,30 @@
 Functions for PDF page label
 '''
 
-import PyPDF2.pdf as PDF
+import collections
+
+import PyPDF2.generic as PDF
 
 from .funcs_rw import get_root_of_rw
 
 # objects for page label
-## named style
+## named style: see "https://www.w3.org/TR/WCAG20-TECHS/PDF17.html" for detail
 _map_style={'roman lowercase': '/r',
             'roman uppercase': '/R',
-            'arabic': '/D'}
+            'arabic': '/D',
+            'alphabet lowercase': '/a',
+            'alphabet uppercase': '/A',}
 _alias_style={'roman lowercase': ['roman'],
               'roman uppercase': ['Roman', 'ROMAN'],
-              'arabic': ['nums', 'Nums', 'NUMS']}
+              'arabic': ['nums', 'Nums', 'NUMS'],
+              'alphabet lowercase': ['alphabet', 'letter'],
+              'alphabet uppercase': ['Alphabet', 'Letter', 'LETTER'],}
 for name, aliases in _alias_style.items():
     s=_map_style[name]
     for a in aliases:
         _map_style[a]=s
 
-def obj_pagelabels(style=None, start=None):
+def obj_pagelabels(style=None, start=None, prefix=None):
     '''
         object for page label
 
@@ -47,6 +53,11 @@ def obj_pagelabels(style=None, start=None):
     obj=PDF.DictionaryObject()
     obj.update({PDF.NameObject("/S"):PDF.NameObject(style)})
     obj.update({PDF.NameObject("/St"): PDF.NumberObject(start)})
+
+    if prefix is not None:
+        obj.update({PDF.NameObject("/P"): PDF.TextStringObject(prefix)})
+
+
     return obj
 
 def obj_nums_array(page, **kwargs):
@@ -61,12 +72,12 @@ def obj_nums_array(page, **kwargs):
     return nums
 
 # add page label
-def add_pagelabel(writer, page, style=None, start=None):
+def add_pagelabel(writer, page, style=None, start=None, prefix=None):
     '''
         add a page label to writer
     '''
     nums_array=locate_pagelabels_in_writer(writer, add_ifnot=True)['/Nums']
-    nums_array.extend(obj_nums_array(page, style=style, start=start))
+    nums_array.extend(obj_nums_array(page, style=style, start=start, prefix=prefix))
 
 def add_pagelabels(writer, pagelabels):
     '''
@@ -93,6 +104,33 @@ def add_pagelabel_head(writer, num_head, style=None):
     add_pagelabel(writer, num_head, style='arabic')
 
     return num_head
+
+def add_pagelabel_extras(writer, extra_pages, num_head=0, style='alphabet', prefix=True):
+    '''
+        add page label for extra pages
+    '''
+    # sort pages
+    cnt_pages_sort=collections.Counter()
+    for p in extra_pages:  # page index starting from 1
+        cnt_pages_sort[p]+=1
+    pages_sort=sorted(cnt_pages_sort.items(), key=lambda t: t[0])
+
+    if not prefix:
+        prefix=None
+
+    # add page label
+    for p, n in pages_sort:
+        if n<=0:
+            continue
+
+        if prefix is not None:
+            prefix=str(p)
+
+        # 2nd arg is page after `p`, by index starting from 0.
+        add_pagelabel(writer, p+num_head, style=style, prefix=prefix)   # actually +1-1
+
+        num_head+=n
+        add_pagelabel(writer, p+num_head, style='arabic', start=p+1)
 
 # get page labels
 def locate_pagelabels_in_writer(writer, add_ifnot=False):

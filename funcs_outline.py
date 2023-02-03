@@ -13,6 +13,8 @@ two types of representation: nest (nested list), level (explicit level specified
 import numbers
 import re
 
+import numpy as np
+
 from PyPDF2.generic import NullObject
 
 from .funcs_rw import open_pdf_as_reader
@@ -91,7 +93,8 @@ def str_clean_unprintable(s):
     return ''.join([i for i in s if i.isprintable()])
 
 # from txt file
-def get_outlines_from_txt(fname, offset=0, lstrip=True, func_level=None):
+def get_outlines_from_txt(fname, offset=0, lstrip=True, func_level=None,
+                                 extra_pages=None):
     '''
         parse text file to the list of entries [title, page number, level]
             see `get_outlines_from_reader` for detail
@@ -114,6 +117,9 @@ def get_outlines_from_txt(fname, offset=0, lstrip=True, func_level=None):
 
             offset: int
                 offset for page number
+
+            extra_pages: None or list of int
+                extra pages which is not in normal page number
     '''
     # strip
     strip=lambda line: line.rstrip()
@@ -133,6 +139,10 @@ def get_outlines_from_txt(fname, offset=0, lstrip=True, func_level=None):
     elif not callable(func_level):
         raise Exception('unexpected func_level:', func_level)
 
+    # extra pages
+    if extra_pages is not None:
+        extra_pages=np.array(extra_pages)
+
     # main work
     result=[]
     with open(fname) as f:
@@ -145,6 +155,10 @@ def get_outlines_from_txt(fname, offset=0, lstrip=True, func_level=None):
             # outline level
             if level is None:
                 level=func_level(title, page)
+
+            # extra pages
+            if extra_pages is not None:
+                page+=np.count_nonzero(extra_pages<page)
 
             # minus 1 since page number in text starts from 1
             result.append([title, page+offset-1, level])
